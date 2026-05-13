@@ -20,9 +20,9 @@ pnpm run dev
 pnpm run build
 ```
 
-## Deploy to GitHub Pages
+## GitHub Pages
 
-This repo deploys with GitHub Actions on every push to `main`.
+This repo is deployed from the `gh-pages` branch.
 
 The site is configured for:
 
