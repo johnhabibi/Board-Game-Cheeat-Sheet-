@@ -1,58 +1,269 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Check, Search } from 'lucide-react';
+
+type GameId = 'jaipur' | 'lostcities' | 'splendor';
+type ViewMode = 'selection' | 'rules';
+
+type Game = {
+  id: GameId;
+  name: string;
+  players: string;
+  time: string;
+  description: string;
+  rulesComponent: () => JSX.Element;
+};
+
+const SELECTED_GAMES_STORAGE_KEY = 'board-game-rules:selected-games';
+
+const games: Game[] = [
+  {
+    id: 'jaipur',
+    name: 'Jaipur',
+    players: '2 players',
+    time: '30 min',
+    description: 'Fast-paced trading game set in the markets of Rajasthan',
+    rulesComponent: JaipurRules,
+  },
+  {
+    id: 'lostcities',
+    name: 'Lost Cities',
+    players: '2 players',
+    time: '30 min',
+    description: 'Card game of expedition and risk management',
+    rulesComponent: LostCitiesRules,
+  },
+  {
+    id: 'splendor',
+    name: 'Splendor',
+    players: '2-4 players',
+    time: '30 min',
+    description: 'Gem trading and card development game',
+    rulesComponent: SplendorRules,
+  },
+];
+
+const gameIds = new Set<GameId>(games.map((game) => game.id));
+
+function readSavedGameIds(): GameId[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  try {
+    const saved = window.localStorage.getItem(SELECTED_GAMES_STORAGE_KEY);
+    if (!saved) {
+      return [];
+    }
+
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    const validIds = parsed.filter((id): id is GameId => gameIds.has(id));
+    return [...new Set(validIds)].slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+
+function saveSelectedGameIds(ids: GameId[]) {
+  try {
+    window.localStorage.setItem(SELECTED_GAMES_STORAGE_KEY, JSON.stringify(ids));
+  } catch {
+    // Local storage can be unavailable in private or locked-down browser contexts.
+  }
+}
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('jaipur');
+  const [selectedGameIds, setSelectedGameIds] = useState<GameId[]>(() => readSavedGameIds());
+  const [viewMode, setViewMode] = useState<ViewMode>(() => selectedGameIdsFromStorage().length ? 'rules' : 'selection');
+  const [activeTab, setActiveTab] = useState<GameId>(() => selectedGameIdsFromStorage()[0] ?? 'jaipur');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const selectedGames = useMemo(
+    () => games.filter((game) => selectedGameIds.includes(game.id)),
+    [selectedGameIds],
+  );
+
+  const filteredGames = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return games;
+    }
+
+    return games.filter((game) => {
+      const searchable = `${game.name} ${game.description}`.toLowerCase();
+      return searchable.includes(normalizedQuery);
+    });
+  }, [searchQuery]);
+
+  function selectedGameIdsFromStorage() {
+    return readSavedGameIds();
+  }
+
+  function toggleGame(id: GameId) {
+    setSelectedGameIds((currentIds) => {
+      if (currentIds.includes(id)) {
+        return currentIds.filter((gameId) => gameId !== id);
+      }
+
+      if (currentIds.length >= 3) {
+        return currentIds;
+      }
+
+      return [...currentIds, id];
+    });
+  }
+
+  function showRules() {
+    if (!selectedGameIds.length) {
+      return;
+    }
+
+    saveSelectedGameIds(selectedGameIds);
+    setActiveTab(selectedGameIds[0]);
+    setViewMode('rules');
+  }
+
+  if (viewMode === 'selection' || !selectedGames.length) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <main className="w-full max-w-4xl mx-auto overflow-hidden px-4 py-8 sm:py-12">
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen className="w-7 h-7 text-slate-700" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Board Game Rules</h1>
+            </div>
+            <p className="text-slate-700">Select games to view quick reference rules</p>
+          </div>
+
+          <div className="relative mb-6">
+            <Search className="absolute left-4 top-1/2 w-5 h-5 -translate-y-1/2 text-slate-500" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search for a game..."
+              className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-12 pr-4 text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-4 focus:ring-slate-200"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {filteredGames.map((game) => {
+              const isSelected = selectedGameIds.includes(game.id);
+
+              return (
+                <button
+                  key={game.id}
+                  type="button"
+                  onClick={() => toggleGame(game.id)}
+                  className={`relative min-w-0 w-full whitespace-normal rounded-lg border bg-white p-5 text-left shadow-sm transition hover:border-slate-400 hover:shadow-md ${
+                    isSelected ? 'border-slate-900 ring-2 ring-slate-900' : 'border-slate-200'
+                  }`}
+                  aria-pressed={isSelected}
+                >
+                  {isSelected && (
+                    <span className="absolute right-4 top-4 grid h-7 w-7 place-items-center rounded-full bg-slate-900 text-white">
+                      <Check className="h-4 w-4" />
+                    </span>
+                  )}
+                  <h2 className="pr-10 text-lg font-bold text-slate-900">{game.name}</h2>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {game.players}
+                    <span className="mx-2">•</span>
+                    {game.time}
+                  </p>
+                  <p className="mt-3 whitespace-normal break-words text-slate-700">{game.description}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          {!filteredGames.length && (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600">
+              No games match your search.
+            </div>
+          )}
+
+          <div className="sticky bottom-0 mt-8 border-t border-slate-200 bg-slate-50/95 py-4 backdrop-blur">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-600">
+                {selectedGameIds.length ? `${selectedGameIds.length} selected` : 'Select at least 1 game'}
+              </p>
+              <button
+                type="button"
+                onClick={showRules}
+                disabled={!selectedGameIds.length}
+                className="rounded-lg bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="w-6 h-6 text-slate-700" />
-            <h1 className="text-xl font-bold text-slate-900">Board Game Rules</h1>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-6 h-6 text-slate-700" />
+              <h1 className="text-xl font-bold text-slate-900">Board Game Rules</h1>
+            </div>
+            <button
+              type="button"
+              onClick={() => setViewMode('selection')}
+              className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+            >
+              Change games
+            </button>
           </div>
         </div>
       </header>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-4xl mx-auto">
-        <div className="sticky top-[76px] z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200">
-          <TabsList className="rules-tabs p-1 gap-1 max-w-4xl mx-auto">
-            <TabsTrigger
-              value="jaipur"
-              className="rules-tab px-2 sm:px-4 py-2.5 text-sm font-medium rounded-md transition-colors data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:bg-slate-100"
-            >
-              Jaipur
-            </TabsTrigger>
-            <TabsTrigger
-              value="lostcities"
-              className="rules-tab px-2 sm:px-4 py-2.5 text-sm font-medium rounded-md transition-colors data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:bg-slate-100"
-            >
-              Lost Cities
-            </TabsTrigger>
-            <TabsTrigger
-              value="splendor"
-              className="rules-tab px-2 sm:px-4 py-2.5 text-sm font-medium rounded-md transition-colors data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:bg-slate-100"
-            >
-              Splendor
-            </TabsTrigger>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          if (gameIds.has(value as GameId)) {
+            setActiveTab(value as GameId);
+          }
+        }}
+        className="max-w-4xl mx-auto"
+      >
+        <div className="sticky top-[73px] z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200">
+          <TabsList
+            className="rules-tabs p-1 gap-1 max-w-4xl mx-auto"
+            style={{ '--rules-tab-count': selectedGames.length } as CSSProperties}
+          >
+            {selectedGames.map((game) => (
+              <TabsTrigger
+                key={game.id}
+                value={game.id}
+                className="rules-tab px-2 sm:px-4 py-2.5 text-sm font-medium rounded-md transition-colors data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[state=inactive]:text-slate-600 data-[state=inactive]:hover:bg-slate-100"
+              >
+                {game.name}
+              </TabsTrigger>
+            ))}
           </TabsList>
         </div>
 
         <div className="px-4 py-6">
-          <TabsContent value="jaipur" className="mt-0">
-            <JaipurRules />
-          </TabsContent>
+          {selectedGames.map((game) => {
+            const RulesComponent = game.rulesComponent;
 
-          <TabsContent value="lostcities" className="mt-0">
-            <LostCitiesRules />
-          </TabsContent>
-
-          <TabsContent value="splendor" className="mt-0">
-            <SplendorRules />
-          </TabsContent>
+            return (
+              <TabsContent key={game.id} value={game.id} className="mt-0">
+                <RulesComponent />
+              </TabsContent>
+            );
+          })}
         </div>
       </Tabs>
     </div>
