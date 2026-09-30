@@ -1,6 +1,6 @@
 # Board Game Rules Reference
 
-A mobile-first web reference for Jaipur, Lost Cities, and Splendor board game rules.
+A mobile-first web reference for Battle Line, Jaipur, Lost Cities, and Splendor board game rules.
 
 ## Setup
 

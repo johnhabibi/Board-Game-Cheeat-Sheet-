@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import { BookOpen, Check, Search } from 'lucide-react';
 
-type GameId = 'jaipur' | 'lostcities' | 'splendor';
+type GameId = 'battleline' | 'jaipur' | 'lostcities' | 'splendor';
 type ViewMode = 'selection' | 'rules';
 
 type Game = {
@@ -18,6 +18,14 @@ type Game = {
 const SELECTED_GAMES_STORAGE_KEY = 'board-game-rules:selected-games';
 
 const games: Game[] = [
+  {
+    id: 'battleline',
+    name: 'Battle Line',
+    players: '2 players',
+    time: '30 min',
+    description: 'Tactical card game of competing formations and contested flags',
+    rulesComponent: BattleLineRules,
+  },
   {
     id: 'jaipur',
     name: 'Jaipur',
@@ -266,6 +274,152 @@ export default function App() {
           })}
         </div>
       </Tabs>
+    </div>
+  );
+}
+
+function BattleLineRules() {
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <div className="inline-block bg-red-100 text-red-900 px-3 py-1 rounded-full text-sm font-medium mb-4">
+          Goal
+        </div>
+        <p className="text-slate-700 leading-relaxed">
+          Be the first to claim <strong>5 flags total</strong> or <strong>3 adjacent flags</strong>.
+        </p>
+      </div>
+
+      <Section title="Setup">
+        <ul className="space-y-2 text-slate-700">
+          <li className="flex gap-2">
+            <span className="text-red-600 font-bold">•</span>
+            <span>Place the <strong>9 flags</strong> in a line between the players.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-red-600 font-bold">•</span>
+            <span>Shuffle the <strong>Troop</strong> and <strong>Tactics</strong> decks separately.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-red-600 font-bold">•</span>
+            <span>Deal each player <strong>7 Troop cards</strong>.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-red-600 font-bold">•</span>
+            <span>Troops come in <strong>6 colors</strong>, numbered <strong>1–10</strong>.</span>
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="On Your Turn">
+        <ol className="space-y-3 text-slate-700">
+          <li className="flex gap-3">
+            <span className="font-bold text-red-600">1.</span>
+            <span>Play <strong>1 Troop or Tactics card</strong> from your hand.</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-red-600">2.</span>
+            <span>Claim any flags you can prove you have won.</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-red-600">3.</span>
+            <span>Draw <strong>1 card</strong> from either the Troop deck or the Tactics deck.</span>
+          </li>
+        </ol>
+        <p className="mt-4 text-slate-700">
+          Normally, each side of a flag holds at most <strong>3 formation cards</strong>. You cannot play beside a claimed flag.
+        </p>
+      </Section>
+
+      <Section title="Formation Ranking">
+        <p className="text-slate-700 mb-4">Formations rank from strongest to weakest:</p>
+        <ol className="space-y-3 text-slate-700">
+          <li className="flex gap-3">
+            <span className="font-bold text-red-600">1.</span>
+            <span><strong>Wedge:</strong> 3 consecutive cards of the same color</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-red-600">2.</span>
+            <span><strong>Phalanx:</strong> 3 cards of the same value</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-red-600">3.</span>
+            <span><strong>Battalion Order:</strong> 3 cards of the same color</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-red-600">4.</span>
+            <span><strong>Skirmish Line:</strong> 3 consecutive cards of any colors</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="font-bold text-red-600">5.</span>
+            <span><strong>Host:</strong> any other 3 cards</span>
+          </li>
+        </ol>
+        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-slate-700">
+          Same type? The formation with the <strong>higher total value</strong> wins. Still tied? The formation that was <strong>completed first</strong> wins.
+        </div>
+      </Section>
+
+      <Section title="Claiming a Flag">
+        <ul className="space-y-2 text-slate-700">
+          <li className="flex gap-2">
+            <span className="text-red-600 font-bold">•</span>
+            <span>Your formation must be complete.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-red-600 font-bold">•</span>
+            <span>If your opponent's formation is incomplete, you must prove that no available Troop cards could let it tie or beat yours.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-red-600 font-bold">•</span>
+            <span>Use only visible, played cards as evidence; cards in either player's hand do not count.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-red-600 font-bold">•</span>
+            <span>Once claimed, a flag cannot change hands.</span>
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="Tactics Cards">
+        <p className="text-slate-700 mb-4">
+          You may play a Tactics card when you have <strong>not already played more Tactics cards</strong> than your opponent.
+        </p>
+
+        <SubSection title="Morale Tactics">
+          <ul className="list-disc space-y-2 pl-5 text-slate-700">
+            <li><strong>Alexander / Darius:</strong> wild value and color; each player may use only one Leader.</li>
+            <li><strong>Companion Cavalry:</strong> value 8 in any color.</li>
+            <li><strong>Shield Bearers:</strong> value 1, 2, or 3 in any color.</li>
+          </ul>
+        </SubSection>
+
+        <SubSection title="Environment Tactics">
+          <ul className="list-disc space-y-2 pl-5 text-slate-700">
+            <li><strong>Fog:</strong> ignore formation types; only total value matters.</li>
+            <li><strong>Mud:</strong> both players need 4 cards at that flag; build and compare 4-card formations.</li>
+          </ul>
+        </SubSection>
+
+        <SubSection title="Guile Tactics">
+          <ul className="list-disc space-y-2 pl-5 text-slate-700">
+            <li><strong>Scout:</strong> draw 3 cards, then return any 2 cards from your hand to the tops of their matching decks. Do not take the normal end-of-turn draw.</li>
+            <li><strong>Redeploy:</strong> move one of your played cards at an unclaimed flag to another legal position, or discard it.</li>
+            <li><strong>Deserter:</strong> discard one of your opponent's played cards at an unclaimed flag.</li>
+            <li><strong>Traitor:</strong> take one of your opponent's Troop cards at an unclaimed flag and play it in an open position on your side.</li>
+          </ul>
+        </SubSection>
+      </Section>
+
+      <Section title="Game End">
+        <p className="text-slate-700">
+          The game ends immediately when a player claims their <strong>fifth flag</strong> or <strong>third adjacent flag</strong>.
+        </p>
+      </Section>
+
+      <Callout>
+        <strong>Easy-to-Miss Rule:</strong> You may play a Tactics card while tied in Tactics count. You cannot play another while you are already one card ahead.
+      </Callout>
     </div>
   );
 }
